@@ -8,22 +8,45 @@ class AgentApp:
                 print(line.strip())
 
     def reset_customer_pin(self, account_number):
+        found = False
         with open(self.database_file, "r") as file:
             lines = file.readlines()
 
-        found = False
         with open(self.database_file, "w") as file:
-            for line in lines:
-                row = line.strip().split(",")
-                if row[2] == account_number:
-                    row[3] = input("Enter a new 4-digit PIN: ")
-                    found = True
-                file.write(",".join(row) + "\n")
+            first_name = None
+            last_name = None
 
-        if found:
-            print("PIN reset successful.")
-        else:
-            print("Customer account not found.")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    key, value = line.split(": ")
+                except ValueError:
+                    continue
+
+                if key.strip() == '"account_number"' and value.strip() == f'"{account_number}",':
+                    found = True
+                    continue
+                elif key.strip() == '"first_name"':
+                    first_name = value.strip()
+                elif key.strip() == '"last_name"':
+                    last_name = value.strip()
+
+                file.write(line + '\n')
+
+            if found:
+                print(f"Account found for: {first_name} {last_name}")
+                confirm = input("Are you sure you want to reset the PIN? (yes/no): ")
+                if confirm.lower() == "yes":
+                    new_pin = input("Enter a new 4-digit PIN: ")
+                    file.write(f'"pin": "{new_pin}",\n')
+                    print("PIN reset successful.")
+                else:
+                    print("PIN reset cancelled.")
+            else:
+                print("Customer account not found.")
 
     def perform_customer_transaction(self, account_number):
         with open(self.database_file, "r") as file:
